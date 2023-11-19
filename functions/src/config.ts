@@ -6,7 +6,8 @@ const envJsoncString = fs.readFileSync(envPath, { encoding: "utf-8" });
 const envJsonString = envJsoncString.replace(/\s\/\/.*/gi, "");
 const env = JSON.parse(envJsonString);
 
-export const serviceAccount = env.SERVICE_ACCOUNT;
+export const schedulerServiceAccount = env.SCHEDULER_SERVICE_ACCOUNT;
+export const functionServiceAccount = env.FUNCTION_SERVICE_ACCOUNT;
 
 export const hostname = env.HOSTNAME;
 

@@ -9,7 +9,13 @@ import http2 from "http2";
 
 import { handleError, logToDatabase } from "./util";
 import { ConnectionEntry, RequestEntry } from "./definitions";
-import { serviceAccount, hostname, resourcesToFetch, regions } from "./config";
+import {
+  schedulerServiceAccount,
+  functionServiceAccount,
+  hostname,
+  resourcesToFetch,
+  regions,
+} from "./config";
 
 const googleAuth = new GoogleAuth();
 
@@ -21,7 +27,7 @@ export const triggerChecks = onSchedule(
     retryCount: 0,
     timeZone: "Asia/Singapore",
     preserveExternalChanges: true,
-    serviceAccount: serviceAccount,
+    serviceAccount: schedulerServiceAccount,
     ingressSettings: "ALLOW_INTERNAL_ONLY",
     cpu: 0.5,
     timeoutSeconds: 10,
@@ -48,7 +54,8 @@ export const check = onRequest(
     region: regions,
     cpu: 0.5,
     timeoutSeconds: 10,
-    invoker: serviceAccount
+    serviceAccount: functionServiceAccount,
+    invoker: schedulerServiceAccount,
   },
   async (request, response) => {
     const startTime = Date.now();
