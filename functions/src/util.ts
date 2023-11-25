@@ -1,9 +1,9 @@
-import { Pool } from "pg";
+import postgres from "postgres";
 
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
-import { postgres } from "./config";
+import { postgresOptions } from "./config";
 
-const pool = postgres.host ? new Pool(postgres) : null;
+const sql = postgresOptions.host ? postgres(postgresOptions) : null;
 
 export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntry) => {
   const entry = {} as ErrorEntry;
@@ -59,7 +59,7 @@ export const logToDatabase = async (
   connection: ConnectionEntry,
   requests: RequestEntry[]
 ) => {
-  if (pool == null) return;
+  if (sql == null) return;
 
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
@@ -131,7 +131,7 @@ export const logToDatabase = async (
   let sqlError;
 
   try {
-    await pool.query(query);
+    await sql.unsafe(query);
   } catch (error) {
     sqlError = handleError(error as ERROR);
   }
@@ -140,15 +140,15 @@ export const logToDatabase = async (
 };
 
 export const purgeOldData = async () => {
-  if (pool == null) return;
+  if (sql == null) return;
 
   let sqlError;
 
   try {
-    await pool.query(`
+    await sql`
       delete from "Connections"
       where "startTime" < current_timestamp - interval '7 days';
-    `);
+    `;
   } catch (error) {
     sqlError = handleError(error as ERROR);
   }

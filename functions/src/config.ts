@@ -1,4 +1,4 @@
-import { PoolConfig } from "pg";
+import postgres from "postgres";
 
 import fs from "fs";
 import path from "path";
@@ -20,11 +20,11 @@ export const resourcesToFetch = env.RESOURCES as {
 
 export const regions = env.REGIONS as string[];
 
-export const postgres = {
+export const postgresOptions = {
   host: env.POSTGRES_HOST,
   port: parseInt(env.POSTGRES_PORT || "") || 5432,
   database: env.POSTGRES_DATABASE || "default",
-  user: env.POSTGRES_USER || "postgres",
+  username: env.POSTGRES_USER || "postgres",
   password: env.POSTGRES_PASSWORD || "",
   max: Math.max(regions.length + 1, 10),
-} as PoolConfig;
+} as postgres.Options<Record<string, never>>;
