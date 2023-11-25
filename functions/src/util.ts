@@ -136,6 +136,22 @@ export const logToDatabase = async (
     sqlError = handleError(error as ERROR);
   }
 
+  if (sqlError) throw sqlError;
+};
+
+export const purgeOldData = async () => {
+  if (pool == null) return;
+
+  let sqlError;
+
+  try {
+    await pool.query(`
+      delete from "Connections"
+      where "startTime" < current_timestamp - interval '7 days';
+    `);
+  } catch (error) {
+    sqlError = handleError(error as ERROR);
+  }
 
   if (sqlError) throw sqlError;
 };

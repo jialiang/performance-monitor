@@ -7,7 +7,7 @@ import { initializeApp } from "firebase-admin/app";
 import dns from "dns";
 import http2 from "http2";
 
-import { handleError, logToDatabase } from "./util";
+import { handleError, logToDatabase, purgeOldData } from "./util";
 import { ConnectionEntry, RequestEntry } from "./definitions";
 import {
   schedulerServiceAccount,
@@ -46,6 +46,8 @@ export const triggerChecks = onSchedule(
         await client.request({ url });
       })
     );
+
+    await purgeOldData();
   }
 );
 

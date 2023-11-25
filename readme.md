@@ -38,7 +38,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 
    CREATE TABLE "Requests" (
        id serial PRIMARY KEY,
-       "connectionId" bigint NOT NULL REFERENCES "Connections"(id),
+       "connectionId" bigint NOT NULL REFERENCES "Connections"(id) ON DELETE CASCADE,
        filename text NOT NULL,
        "requestSent" integer,
        "responseStart" integer,
