@@ -1,3 +1,5 @@
+import { PoolConfig } from "pg";
+
 import fs from "fs";
 import path from "path";
 
@@ -24,4 +26,5 @@ export const postgres = {
   database: env.POSTGRES_DATABASE || "default",
   user: env.POSTGRES_USER || "postgres",
   password: env.POSTGRES_PASSWORD || "",
-};
+  max: Math.max(regions.length + 1, 10),
+} as PoolConfig;

@@ -1,7 +1,9 @@
-import { Client } from "pg";
+import { Pool } from "pg";
 
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
 import { postgres } from "./config";
+
+const pool = postgres.host ? new Pool(postgres) : null;
 
 export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntry) => {
   const entry = {} as ErrorEntry;
@@ -57,7 +59,7 @@ export const logToDatabase = async (
   connection: ConnectionEntry,
   requests: RequestEntry[]
 ) => {
-  if (postgres.host == null) return;
+  if (pool == null) return;
 
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
@@ -128,16 +130,12 @@ export const logToDatabase = async (
 
   let sqlError;
 
-  const sqlClient = new Client(postgres);
-
   try {
-    await sqlClient.connect();
-    await sqlClient.query(query);
+    await pool.query(query);
   } catch (error) {
     sqlError = handleError(error as ERROR);
   }
 
-  await sqlClient.end();
 
   if (sqlError) throw sqlError;
 };
