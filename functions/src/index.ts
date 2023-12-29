@@ -3,6 +3,7 @@ import { GoogleAuth } from "google-auth-library";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
+import { error } from "firebase-functions/logger";
 
 import dns from "dns";
 import http2 from "http2";
@@ -33,21 +34,59 @@ export const triggerChecks = onSchedule(
     timeoutSeconds: 10,
   },
   async () => {
-    await Promise.allSettled(
-      regions.map(async (region) => {
-        const url = `https://${region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/check`;
+    const pendingRegions = {} as { [key: string]: string };
 
-        if (process.env.FUNCTIONS_EMULATOR) {
-          console.log(`Fetch ${url} ran.`);
-          return;
-        }
+    const job = async () => {
+      await Promise.allSettled(
+        regions.map(async (region) => {
+          const url = `https://${region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/check`;
 
-        const client = await googleAuth.getIdTokenClient(url);
-        await client.request({ url });
-      })
-    );
+          if (process.env.FUNCTIONS_EMULATOR) {
+            console.log(`Fetch ${url} ran.`);
+            return 200;
+          }
 
-    await purgeOldData();
+          pendingRegions[region] = "Getting ID Token";
+
+          const client = await googleAuth.getIdTokenClient(url);
+
+          pendingRegions[region] = "Requesting resource";
+
+          const response = await client.request({ url });
+
+          delete pendingRegions[region];
+
+          if (response.status !== 200) {
+            let message = response.data;
+
+            if (typeof response.data === "object") message = JSON.stringify(response.data);
+
+            error(`Non-200 response from ${region}: ${message}`);
+          }
+
+          return response.status;
+        })
+      );
+
+      await purgeOldData();
+
+      return "ok";
+    };
+
+    const timer = async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 9000);
+      });
+
+      return "timeout";
+    };
+
+    const result = await Promise.race([job(), timer()]);
+
+    if (result === "timeout") {
+      if (Object.keys(pendingRegions).length === 0) error("Timeout purging old data");
+      else error(`Timeout waiting for ${JSON.stringify(pendingRegions)}`);
+    }
   }
 );
 
