@@ -162,11 +162,7 @@ export const check = onRequest(
             entry.responseHeaders = headers;
           });
 
-          const chunks = [] as Buffer[];
-
-          stream.on("data", (chunk) => {
-            chunks.push(chunk);
-          });
+          stream.on("data", () => {});
 
           stream.on("end", () => {
             entry.responseEnd = getElapsed();
