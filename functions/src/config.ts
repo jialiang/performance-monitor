@@ -16,6 +16,7 @@ export const hostname = env.HOSTNAME;
 export const resourcesToFetch = env.RESOURCES as {
   path: string;
   label: string;
+  logToDatabase?: boolean;
 }[];
 
 export const regions = env.REGIONS as string[];

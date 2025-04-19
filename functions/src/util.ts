@@ -1,7 +1,7 @@
 import postgres from "postgres";
 
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
-import { postgresOptions } from "./config";
+import { postgresOptions, resourcesToFetch } from "./config";
 
 const sql = postgresOptions.host ? postgres(postgresOptions) : null;
 
@@ -66,6 +66,11 @@ export const logToDatabase = async (
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
 
+  const shouldLogToDatabase = resourcesToFetch.reduce((shouldLogToDatabase, resource) => {
+    if (resource.logToDatabase === true) shouldLogToDatabase[resource.label] = true;
+    return shouldLogToDatabase;
+  }, {} as { [key: string]: boolean });
+
   const connectionValues = [
     prepareValueForSql(region, "text"),
     prepareValueForSql(new Date(startTime).toISOString(), "text"),
@@ -76,18 +81,22 @@ export const logToDatabase = async (
     prepareValueForSql(connection.errors, "json[]"),
   ];
 
-  const requestValues = requests.map((request) => {
-    const fields = [
-      prepareValueForSql(request.filename, "text"),
-      prepareValueForSql(request.requestSent, "int"),
-      prepareValueForSql(request.responseStart, "int"),
-      prepareValueForSql(request.responseEnd, "int"),
-      prepareValueForSql(request.responseHeaders, "json"),
-      prepareValueForSql(request.errors, "json[]"),
-    ];
+  const requestValues = requests
+    .map((request) => {
+      if (!shouldLogToDatabase[request.filename]) return "";
 
-    return `(${fields.join(",")})`;
-  });
+      const fields = [
+        prepareValueForSql(request.filename, "text"),
+        prepareValueForSql(request.requestSent, "int"),
+        prepareValueForSql(request.responseStart, "int"),
+        prepareValueForSql(request.responseEnd, "int"),
+        prepareValueForSql(request.responseHeaders, "json"),
+        prepareValueForSql(request.errors, "json[]"),
+      ];
+
+      return `(${fields.join(",")})`;
+    })
+    .filter((request) => request);
 
   const query = `
     with connection as (
