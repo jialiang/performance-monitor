@@ -142,7 +142,7 @@ export const logToDatabase = async (
 };
 
 export const purgeOldData = async () => {
-  if (sql == null) return;
+  if (sql == null) return 200;
 
   let sqlError;
 
@@ -156,4 +156,6 @@ export const purgeOldData = async () => {
   }
 
   if (sqlError) throw sqlError;
+
+  return 200;
 };

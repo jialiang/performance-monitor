@@ -37,38 +37,38 @@ export const triggerChecks = onSchedule(
     const pendingRegions = {} as { [key: string]: string };
 
     const job = async () => {
-      await Promise.allSettled(
-        regions.map(async (region) => {
-          const url = `https://${region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/check`;
+      const promises = regions.map(async (region) => {
+        const url = `https://${region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/check`;
 
-          if (process.env.FUNCTIONS_EMULATOR) {
-            console.log(`Fetch ${url} ran.`);
-            return 200;
-          }
+        if (process.env.FUNCTIONS_EMULATOR) {
+          console.log(`Fetch ${url} ran.`);
+          return 200;
+        }
 
-          pendingRegions[region] = "Getting ID Token";
+        pendingRegions[region] = "Getting ID Token";
 
-          const client = await googleAuth.getIdTokenClient(url);
+        const client = await googleAuth.getIdTokenClient(url);
 
-          pendingRegions[region] = "Requesting resource";
+        pendingRegions[region] = "Requesting resource";
 
-          const response = await client.request({ url });
+        const response = await client.request({ url });
 
-          delete pendingRegions[region];
+        delete pendingRegions[region];
 
-          if (response.status !== 200) {
-            let message = response.data;
+        if (response.status !== 200) {
+          let message = response.data;
 
-            if (typeof response.data === "object") message = JSON.stringify(response.data);
+          if (typeof response.data === "object") message = JSON.stringify(response.data);
 
-            error(`Non-200 response from ${region}: ${message}`);
-          }
+          error(`Non-200 response from ${region}: ${message}`);
+        }
 
-          return response.status;
-        })
-      );
+        return response.status;
+      });
 
-      await purgeOldData();
+      promises.push(purgeOldData());
+
+      await Promise.allSettled(promises).catch(error);
 
       return "ok";
     };
