@@ -109,11 +109,6 @@ export const check = onRequest(
 
     try {
       const client = http2.connect(hostname, {
-        settings: {
-          // enables streams to run in parallel, otherwise window_size starved
-          // set to 8x default
-          initialWindowSize: (1 << 16) * 8,
-        },
         lookup: (hostname, family, callback) => {
           connection.dnsLookupStart = getElapsed();
           return dns.lookup(hostname, family, callback);
