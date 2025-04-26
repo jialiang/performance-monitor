@@ -25,14 +25,15 @@ initializeApp();
 export const triggerChecks = onSchedule(
   {
     schedule: "* * * * *",
-    retryCount: 0,
     timeZone: "Asia/Singapore",
-    preserveExternalChanges: true,
+    retryCount: 0,
+
     timeoutSeconds: 30,
     maxInstances: 1,
     cpu: 0.25,
     serviceAccount: schedulerServiceAccount,
     ingressSettings: "ALLOW_INTERNAL_ONLY",
+    preserveExternalChanges: true,
   },
   async () => {
     const pendingRegions = {} as { [key: string]: string };
