@@ -28,10 +28,10 @@ export const triggerChecks = onSchedule(
     retryCount: 0,
     timeZone: "Asia/Singapore",
     preserveExternalChanges: true,
+    timeoutSeconds: 30,
     cpu: 0.25,
     serviceAccount: schedulerServiceAccount,
     ingressSettings: "ALLOW_INTERNAL_ONLY",
-    timeoutSeconds: 10,
   },
   async () => {
     const pendingRegions = {} as { [key: string]: string };
@@ -75,7 +75,7 @@ export const triggerChecks = onSchedule(
 
     const timer = async () => {
       await new Promise((resolve) => {
-        setTimeout(resolve, 9000);
+        setTimeout(resolve, 21000);
       });
 
       return "timeout";
@@ -93,7 +93,7 @@ export const triggerChecks = onSchedule(
 export const check = onRequest(
   {
     region: regions,
-    timeoutSeconds: 10,
+    timeoutSeconds: 20,
     cpu: 0.25,
     serviceAccount: functionServiceAccount,
     invoker: schedulerServiceAccount,
