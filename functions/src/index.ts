@@ -29,6 +29,7 @@ export const triggerChecks = onSchedule(
     timeZone: "Asia/Singapore",
     preserveExternalChanges: true,
     timeoutSeconds: 30,
+    maxInstances: 1,
     cpu: 0.25,
     serviceAccount: schedulerServiceAccount,
     ingressSettings: "ALLOW_INTERNAL_ONLY",
@@ -94,6 +95,7 @@ export const check = onRequest(
   {
     region: regions,
     timeoutSeconds: 20,
+    maxInstances: 1,
     cpu: 0.25,
     serviceAccount: functionServiceAccount,
     invoker: schedulerServiceAccount,
