@@ -60,7 +60,7 @@ export const triggerChecks = onSchedule(
 
           if (typeof response.data === "object") message = JSON.stringify(response.data);
 
-          error(`Non-200 response from ${region}: ${message}`);
+          error(`Error ${response.status} from ${region}: ${message}`);
         }
 
         return response.status;
