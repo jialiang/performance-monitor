@@ -70,7 +70,11 @@ export const triggerChecks = onSchedule(
 
       promises.push(purgeOldData());
 
-      await Promise.allSettled(promises).catch(error);
+      const results = await Promise.allSettled(promises);
+
+      results.forEach((result) => {
+        if (result.status === "rejected") error(result.reason);
+      });
 
       return "ok";
     };
