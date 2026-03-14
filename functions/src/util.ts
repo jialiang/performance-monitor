@@ -1,5 +1,7 @@
 import postgres from "postgres";
 
+import { error } from "firebase-functions/logger";
+
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
 import { postgresOptions, resourcesToFetch } from "./config";
 
@@ -147,7 +149,7 @@ export const logToDatabase = async (
     sqlError = handleError(error as ERROR);
   }
 
-  if (sqlError) throw sqlError;
+  if (sqlError) error(sqlError);
 };
 
 export const purgeOldData = async () => {
@@ -164,7 +166,7 @@ export const purgeOldData = async () => {
     sqlError = handleError(error as ERROR);
   }
 
-  if (sqlError) throw sqlError;
+  if (sqlError) error(sqlError);
 
   return 200;
 };
