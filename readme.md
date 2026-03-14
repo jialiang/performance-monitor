@@ -21,7 +21,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 
 1. Run `npm install` in root and in the `/functions` path.
 2. Run `npx firebase login`.
-3. Create a file `env.jsonc` in `/functions` for your environment variables. Refer to `example.env.jsonc` for valid keys and values. 
+3. Create a file `env.jsonc` in `/functions` for your environment variables. Refer to `example.env.jsonc` for valid keys and values.
 4. (Optional) Create a PostgreSQL server with the following schemas:
 
    ```
@@ -53,9 +53,13 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 1. Run `npm run build:watch` in the `/functions` path.
 2. Run `npx firebase emulators:start` in root.
 
+Make sure Java is installed. It is required by the pubsub emulator. You can check by running `java --version`.
+
 ## Deploy
 
-- Run `npx firebase deploy` in root.
+1. Run `npx firebase projects:list` to list your projects. You can go to https://console.firebase.google.com to create a project.
+2. Run `npx firebase use --add <project-id>` to set the active project.
+3. Run `npx firebase deploy` in root.
 
 ## Motivation
 
