@@ -46,7 +46,7 @@ export const prepareValueForSql = (
       return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
 
     case "json[]":
-      if (value instanceof Array && value.length === 0) {
+      if (value instanceof Array && value.length > 0) {
         return `array[${value
           .map((v) => `'${JSON.stringify(v).replace(/'/g, "''")}'`)
           .join(",")}]`;
