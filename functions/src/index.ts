@@ -1,4 +1,4 @@
-import { GoogleAuth } from "google-auth-library";
+import { GoogleAuth, gaxios } from "google-auth-library";
 
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
@@ -53,7 +53,15 @@ export const triggerChecks = onSchedule(
 
         pendingRegions[region] = "Requesting resource";
 
-        const response = await client.request({ url });
+        const response = await client.request({
+          url,
+          retry: true,
+          retryConfig: {
+            onRetryAttempt: (gaxiosError: gaxios.GaxiosError) => {
+              pendingRegions[region] = `Retrying after: ${gaxiosError.message}`;
+            },
+          },
+        });
 
         delete pendingRegions[region];
 
