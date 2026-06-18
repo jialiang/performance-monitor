@@ -13,7 +13,7 @@ In the process, they will record the following network timings and metadata:
 - Data transfer time.
 - Response headers.
 
-The information collected is sent to a PostgreSQL database for storage (optional, to be set up separately).
+The information collected is sent to a BigQuery table for storage (optional, to be set up separately).
 
 Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) and the default amount of memory (256MB).
 
@@ -22,31 +22,33 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 1. Run `npm install` in root and in the `/functions` path.
 2. Run `npx firebase login`.
 3. Create a file `env.jsonc` in `/functions` for your environment variables. Refer to `example.env.jsonc` for valid keys and values.
-4. (Optional) Create a PostgreSQL server with the following schemas:
+4. (Optional) Set up BigQuery for storage. Each check writes one row, with its per-resource requests nested in a `requests` array.
 
    ```
-   CREATE TABLE "Connections" (
-       id serial PRIMARY KEY,
-       region text NOT NULL,
-       "startTime" timestamp without time zone NOT NULL,
-       "dnsLookupStart" integer,
-       "dnsLookupEnd" integer,
-       "tcpDone" integer,
-       "tlsDone" integer,
-       errors json[]
-   );
+   # Dataset
+   bq --location=US mk -d <project>:monitoring
 
-   CREATE TABLE "Requests" (
-       id serial PRIMARY KEY,
-       "connectionId" bigint NOT NULL REFERENCES "Connections"(id) ON DELETE CASCADE,
-       filename text NOT NULL,
-       "requestSent" integer,
-       "responseStart" integer,
-       "responseEnd" integer,
-       "responseHeaders" json,
-       errors json[]
-   );
+   # Table: partitioned by day, auto-expires rows after 7 days, clustered by region.
+   # Schema lives in functions/bigquery/connections.schema.json.
+   bq mk --table \
+     --time_partitioning_field startTime \
+     --time_partitioning_type DAY \
+     --time_partitioning_expiration 604800 \
+     --clustering_fields region \
+     <project>:monitoring.connections \
+     functions/bigquery/connections.schema.json
    ```
+
+   Then grant the function's service account write access:
+
+   ```
+   bq add-iam-policy-binding \
+     --member="serviceAccount:<FUNCTION_SERVICE_ACCOUNT>" \
+     --role="roles/bigquery.dataEditor" \
+     <project>:monitoring
+   ```
+
+   The deployed functions authenticate via the attached service account (ADC) — no credentials in the config. Rows older than 7 days are pruned automatically by partition expiration. Set the `BIGQUERY_*` keys in `env.jsonc` (see `example.env.jsonc`) to enable logging.
 
 ## Develop
 

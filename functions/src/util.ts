@@ -1,11 +1,16 @@
-import postgres from "postgres";
+import { BigQuery } from "@google-cloud/bigquery";
 
 import { error } from "firebase-functions/logger";
 
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
-import { postgresOptions, resourcesToFetch } from "./config";
+import { bigQueryOptions, resourcesToFetch } from "./config";
 
-const sql = postgresOptions.host ? postgres(postgresOptions) : null;
+const table =
+  bigQueryOptions.datasetId != null
+    ? new BigQuery({ projectId: bigQueryOptions.projectId })
+      .dataset(bigQueryOptions.datasetId)
+      .table(bigQueryOptions.tableId)
+    : null;
 
 export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntry) => {
   const entry = {} as ErrorEntry;
@@ -31,31 +36,10 @@ export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntr
   return entry;
 };
 
-export const prepareValueForSql = (
-  value: number | string | object | object[] | undefined,
-  type: "int" | "text" | "json" | "json[]"
-) => {
-  if (value == null) return "null";
-
-  switch (type) {
-    case "int":
-      return value;
-
-    case "text":
-      return `'${value}'`;
-
-    case "json":
-      return `'${JSON.stringify(value).replace(/'/g, "''")}'`;
-
-    case "json[]":
-      if (value instanceof Array && value.length > 0) {
-        return `array[${value
-          .map((v) => `'${JSON.stringify(v).replace(/'/g, "''")}'`)
-          .join(",")}]`;
-      }
-  }
-
-  return "null";
+const toJsonString = (value: object | object[] | undefined) => {
+  if (value == null) return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  return JSON.stringify(value);
 };
 
 export const logToDatabase = async (
@@ -63,7 +47,7 @@ export const logToDatabase = async (
   connection: ConnectionEntry,
   requests: RequestEntry[]
 ) => {
-  if (sql == null) return;
+  if (table == null) return;
 
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
@@ -73,100 +57,31 @@ export const logToDatabase = async (
     return shouldLogToDatabase;
   }, {} as { [key: string]: boolean });
 
-  const connectionValues = [
-    prepareValueForSql(region, "text"),
-    prepareValueForSql(new Date(startTime).toISOString(), "text"),
-    prepareValueForSql(connection.dnsLookupStart, "int"),
-    prepareValueForSql(connection.dnsLookupEnd, "int"),
-    prepareValueForSql(connection.tcpDone, "int"),
-    prepareValueForSql(connection.tlsDone, "int"),
-    prepareValueForSql(connection.errors, "json[]"),
-  ];
-
-  const requestValues = requests
-    .map((request) => {
-      if (!shouldLogToDatabase[request.filename]) return "";
-
-      const fields = [
-        prepareValueForSql(request.filename, "text"),
-        prepareValueForSql(request.requestSent, "int"),
-        prepareValueForSql(request.responseStart, "int"),
-        prepareValueForSql(request.responseEnd, "int"),
-        prepareValueForSql(request.responseHeaders, "json"),
-        prepareValueForSql(request.errors, "json[]"),
-      ];
-
-      return `(${fields.join(",")})`;
-    })
-    .filter((request) => request);
-
-  const query = `
-    with connection as (
-      insert into "Connections" (
-        "region",
-        "startTime",
-        "dnsLookupStart",
-        "dnsLookupEnd",
-        "tcpDone",
-        "tlsDone",
-        "errors"
-      ) values (${connectionValues.join(",")})
-      returning "id"
-    ),
-    requests (
-      "filename",
-      "requestSent",
-      "responseStart",
-      "responseEnd",
-      "responseHeaders",
-      "errors"
-    ) as (values ${requestValues.join(",")})
-
-    insert into "Requests" (
-      "connectionId",
-      "filename",
-      "requestSent",
-      "responseStart",
-      "responseEnd",
-      "responseHeaders",
-      "errors"
-    ) select
-      "connection"."id",
-      "filename",
-      "requestSent",
-      "responseStart",
-      "responseEnd",
-      "responseHeaders"::json,
-      "errors"::json[]
-    from connection cross join requests;
-  `;
-
-  let sqlError;
+  const row = {
+    region,
+    startTime: new Date(startTime).toISOString(),
+    dnsLookupStart: connection.dnsLookupStart ?? null,
+    dnsLookupEnd: connection.dnsLookupEnd ?? null,
+    tcpDone: connection.tcpDone ?? null,
+    tlsDone: connection.tlsDone ?? null,
+    errors: toJsonString(connection.errors),
+    requests: requests
+      .filter((request) => shouldLogToDatabase[request.filename])
+      .map((request) => ({
+        filename: request.filename,
+        requestSent: request.requestSent ?? null,
+        responseStart: request.responseStart ?? null,
+        responseEnd: request.responseEnd ?? null,
+        responseHeaders: toJsonString(request.responseHeaders),
+        errors: toJsonString(request.errors),
+      })),
+  };
 
   try {
-    await sql.unsafe(query);
-  } catch (error) {
-    sqlError = handleError(error as ERROR);
+    await table.insert([row]);
+  } catch (insertError) {
+    // Log the raw error: a BigQuery PartialFailureError carries the per-row
+    // failure detail in `.errors`, which must not be stripped.
+    error("BigQuery insert failed", insertError);
   }
-
-  if (sqlError) error(sqlError);
-};
-
-export const purgeOldData = async () => {
-  if (sql == null) return 200;
-
-  let sqlError;
-
-  try {
-    await sql`
-      delete from "Connections"
-      where "startTime" < current_timestamp - interval '7 days';
-    `;
-  } catch (error) {
-    sqlError = handleError(error as ERROR);
-  }
-
-  if (sqlError) error(sqlError);
-
-  return 200;
 };
