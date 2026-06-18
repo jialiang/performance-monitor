@@ -1,0 +1,22 @@
+[
+  { "name": "region", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "startTime", "type": "TIMESTAMP", "mode": "REQUIRED" },
+  { "name": "dnsLookupStart", "type": "INT64", "mode": "NULLABLE" },
+  { "name": "dnsLookupEnd", "type": "INT64", "mode": "NULLABLE" },
+  { "name": "tcpDone", "type": "INT64", "mode": "NULLABLE" },
+  { "name": "tlsDone", "type": "INT64", "mode": "NULLABLE" },
+  { "name": "errors", "type": "STRING", "mode": "NULLABLE" },
+  {
+    "name": "requests",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      { "name": "filename", "type": "STRING", "mode": "NULLABLE" },
+      { "name": "requestSent", "type": "INT64", "mode": "NULLABLE" },
+      { "name": "responseStart", "type": "INT64", "mode": "NULLABLE" },
+      { "name": "responseEnd", "type": "INT64", "mode": "NULLABLE" },
+      { "name": "responseHeaders", "type": "STRING", "mode": "NULLABLE" },
+      { "name": "errors", "type": "STRING", "mode": "NULLABLE" }
+    ]
+  }
+]

@@ -8,7 +8,7 @@ import { error } from "firebase-functions/logger";
 import dns from "dns";
 import http2 from "http2";
 
-import { handleError, logToDatabase, purgeOldData } from "./util";
+import { handleError, logToDatabase } from "./util";
 import { ConnectionEntry, RequestEntry } from "./definitions";
 import {
   schedulerServiceAccount,
@@ -76,8 +76,6 @@ export const triggerChecks = onSchedule(
         return response.status;
       });
 
-      promises.push(purgeOldData());
-
       const results = await Promise.allSettled(promises);
 
       results.forEach((result) => {
@@ -98,7 +96,7 @@ export const triggerChecks = onSchedule(
     const result = await Promise.race([job(), timer()]);
 
     if (result === "timeout") {
-      if (Object.keys(pendingRegions).length === 0) error("Timeout purging old data");
+      if (Object.keys(pendingRegions).length === 0) error("Timeout running checks");
       else error(`Timeout waiting for ${JSON.stringify(pendingRegions)}`);
     }
   }

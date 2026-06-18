@@ -1,5 +1,3 @@
-import postgres from "postgres";
-
 import fs from "fs";
 import path from "path";
 
@@ -21,11 +19,8 @@ export const resourcesToFetch = env.RESOURCES as {
 
 export const regions = env.REGIONS as string[];
 
-export const postgresOptions = {
-  host: env.POSTGRES_HOST,
-  port: parseInt(env.POSTGRES_PORT || "") || 5432,
-  database: env.POSTGRES_DATABASE || "default",
-  username: env.POSTGRES_USER || "postgres",
-  password: env.POSTGRES_PASSWORD || "",
-  max: Math.max(regions.length + 1, 10),
-} as postgres.Options<Record<string, never>>;
+export const bigQueryOptions = {
+  projectId: env.BIGQUERY_PROJECT || process.env.GCLOUD_PROJECT || undefined,
+  datasetId: env.BIGQUERY_DATASET as string | undefined,
+  tableId: (env.BIGQUERY_TABLE as string) || "connections",
+};
