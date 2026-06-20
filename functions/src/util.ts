@@ -1,16 +1,50 @@
-import { BigQuery } from "@google-cloud/bigquery";
+import { adapt, managedwriter, protos } from "@google-cloud/bigquery-storage";
 
 import { error } from "firebase-functions/logger";
 
 import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
 import { bigQueryOptions, resourcesToFetch } from "./config";
 
-const table =
+const { WriterClient, JSONWriter } = managedwriter;
+
+const destinationTable =
   bigQueryOptions.datasetId != null
-    ? new BigQuery({ projectId: bigQueryOptions.projectId })
-      .dataset(bigQueryOptions.datasetId)
-      .table(bigQueryOptions.tableId)
+    ? `projects/${bigQueryOptions.projectId}/datasets/${bigQueryOptions.datasetId}` +
+      `/tables/${bigQueryOptions.tableId}`
     : null;
+
+let writeClient: InstanceType<typeof WriterClient> | null = null;
+let writer: InstanceType<typeof JSONWriter> | null = null;
+
+// Lazily create the Storage Write API stream and reuse it across invocations on a
+// warm instance. Re-created on first use, or after the previous writer errored
+// (the catch below clears `writer` so the next call rebuilds the connection).
+const getWriter = async () => {
+  if (writer) return writer;
+  if (destinationTable == null) return null;
+
+  const streamId = `${destinationTable}/streams/_default`;
+
+  if (writeClient == null) {
+    writeClient = new WriterClient({ projectId: bigQueryOptions.projectId });
+  }
+
+  const writeStream = await writeClient.getWriteStream({
+    streamId,
+    view: protos.google.cloud.bigquery.storage.v1.WriteStreamView.FULL,
+  });
+
+  if (writeStream.tableSchema == null) throw new Error("Missing table schema for write stream");
+
+  const protoDescriptor = adapt.convertStorageSchemaToProto2Descriptor(
+    writeStream.tableSchema,
+    "root"
+  );
+  const connection = await writeClient.createStreamConnection({ streamId });
+
+  writer = new JSONWriter({ connection, protoDescriptor });
+  return writer;
+};
 
 export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntry) => {
   const entry = {} as ErrorEntry;
@@ -47,7 +81,7 @@ export const logToDatabase = async (
   connection: ConnectionEntry,
   requests: RequestEntry[]
 ) => {
-  if (table == null) return;
+  if (destinationTable == null) return;
 
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
@@ -59,7 +93,8 @@ export const logToDatabase = async (
 
   const row = {
     region,
-    startTime: new Date(startTime).toISOString(),
+    // Storage Write API encodes TIMESTAMP as microseconds since the epoch.
+    startTime: startTime * 1000,
     dnsLookupStart: connection.dnsLookupStart ?? null,
     dnsLookupEnd: connection.dnsLookupEnd ?? null,
     tcpDone: connection.tcpDone ?? null,
@@ -78,10 +113,14 @@ export const logToDatabase = async (
   };
 
   try {
-    await table.insert([row]);
-  } catch (insertError) {
-    // Log the raw error: a BigQuery PartialFailureError carries the per-row
-    // failure detail in `.errors`, which must not be stripped.
-    error("BigQuery insert failed", insertError);
+    const activeWriter = await getWriter();
+    if (activeWriter == null) return;
+
+    const pendingWrite = activeWriter.appendRows([row]);
+    await pendingWrite.getResult();
+  } catch (appendError) {
+    error("BigQuery Storage Write append failed", appendError);
+    // Drop the cached writer so the next invocation rebuilds the stream.
+    writer = null;
   }
 };
