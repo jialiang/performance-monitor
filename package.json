@@ -1,5 +1,11 @@
 {
+  "scripts": {
+    "format": "prettier --write ."
+  },
   "dependencies": {
     "firebase-tools": "^14.2.0"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
   }
 }

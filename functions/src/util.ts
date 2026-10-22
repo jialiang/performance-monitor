@@ -86,10 +86,13 @@ export const logToDatabase = async (
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
 
-  const shouldLogToDatabase = resourcesToFetch.reduce((shouldLogToDatabase, resource) => {
-    if (resource.logToDatabase === true) shouldLogToDatabase[resource.label] = true;
-    return shouldLogToDatabase;
-  }, {} as { [key: string]: boolean });
+  const shouldLogToDatabase = resourcesToFetch.reduce(
+    (shouldLogToDatabase, resource) => {
+      if (resource.logToDatabase === true) shouldLogToDatabase[resource.label] = true;
+      return shouldLogToDatabase;
+    },
+    {} as { [key: string]: boolean }
+  );
 
   const row = {
     region,
