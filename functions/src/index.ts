@@ -151,11 +151,15 @@ export const check = onRequest(
         connection.tlsDone = getElapsed();
       });
 
-      const requestPromises = resourcesToFetch.map(({ path, label }) => {
+      const requestPromises = resourcesToFetch.map((resource) => {
+        const { path, label, logToDatabase: isLoggedToDatabase } = resource;
         const entry = { filename: label } as RequestEntry;
 
         return new Promise((resolve) => {
+          // Unlogged resources are only fetched to keep them in the CDN cache.
+          // A HEAD request still counts as a cache hit but skips downloading the body.
           const stream = client.request({
+            ":method": isLoggedToDatabase ? "GET" : "HEAD",
             ":path": path,
             "accept-encoding": "gzip, deflate",
             "Fastly-Debug": 1,
