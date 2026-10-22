@@ -65,3 +65,6 @@ node_modules/
 # environment variables file
 .env
 env.jsonc
+
+# BigQuery view definition (names the monitored resources)
+functions/bigquery/fetch_timings.sql
