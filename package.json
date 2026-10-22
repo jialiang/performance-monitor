@@ -3,7 +3,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "firebase-tools": "^14.27.0"
+    "firebase-tools": "^15.34.1"
   },
   "devDependencies": {
     "prettier": "3.9.10"
