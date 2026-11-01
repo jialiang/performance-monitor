@@ -22,7 +22,32 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 1. Run `npm install` in root and in the `/functions` path.
 2. Run `npx firebase login`.
 3. Create a file `env.jsonc` in `/functions` for your environment variables. Refer to `example.env.jsonc` for valid keys and values.
-4. (Optional) Set up BigQuery for storage. Each check writes one row, with its per-resource requests nested in a `requests` array.
+4. Set the list of resources to fetch in Firebase Remote Config, so it can be changed without a deploy.
+   1. On your Firebase console's sidebar, go to DevOps & Engagement -> Remote Config
+   1. Choose server from the dropdown.
+   1. Create a parameter named `env`, typed `JSON` and the following shape:
+
+      ```
+      {
+        "RESOURCES": [
+          { "path": "/", "label": "index" },
+          { "path": "/path/to/resource/1", "label": "resource 1", "logToDatabase": true },
+          { "path": "/path/to/resource/2", "label": "resource 2" }
+        ]
+      }
+      ```
+
+      Entries with `logToDatabase: true` are fetched with GET and logged. The rest are fetched with HEAD, which keeps them in the CDN cache without downloading them. A published change is picked up within 5 minutes. If the template can't be loaded or `RESOURCES` is missing, nothing is fetched and the error is logged.
+
+      If needed, grant the function's service account read access to the template using:
+
+      ```
+      gcloud projects add-iam-policy-binding <project> \
+        --member="serviceAccount:<FUNCTION_SERVICE_ACCOUNT>" \
+        --role="roles/cloudconfig.viewer"
+      ```
+
+5. (Optional) Set up BigQuery for storage. Each check writes one row, with its per-resource requests nested in a `requests` array.
 
    ```
    # Dataset
@@ -39,7 +64,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
      functions/bigquery/connections.schema.json
    ```
 
-   Then grant the function's service account write access:
+   If needed, grant the function's service account write access:
 
    ```
    bq add-iam-policy-binding \
@@ -48,7 +73,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
      <project>:monitoring
    ```
 
-   The deployed functions authenticate via the attached service account (ADC) — no credentials in the config. Rows older than 7 days are pruned automatically by partition expiration. Set the `BIGQUERY_*` keys in `env.jsonc` (see `example.env.jsonc`) to enable logging.
+   Rows older than 7 days are pruned automatically by partition expiration. Set the `BIGQUERY_*` keys in `env.jsonc` (see `example.env.jsonc`) to enable logging.
 
 ## Develop
 

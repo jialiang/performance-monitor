@@ -9,14 +9,9 @@ import dns from "dns";
 import http2 from "http2";
 
 import { handleError, logToDatabase } from "./util";
+import { getResourcesToFetch } from "./remote-config";
 import { ConnectionEntry, RequestEntry } from "./definitions";
-import {
-  schedulerServiceAccount,
-  functionServiceAccount,
-  hostname,
-  resourcesToFetch,
-  regions,
-} from "./config";
+import { schedulerServiceAccount, functionServiceAccount, hostname, regions } from "./config";
 
 const googleAuth = new GoogleAuth();
 
@@ -112,13 +107,15 @@ export const check = onRequest(
     invoker: schedulerServiceAccount,
   },
   async (request, response) => {
+    if (!hostname) throw "Missing environment variable: hostname";
+
+    const resources = await getResourcesToFetch();
+
     const startTime = Date.now();
     const getElapsed = () => Date.now() - startTime;
 
     const connection = {} as ConnectionEntry;
     let requests = [] as RequestEntry[];
-
-    if (!hostname) throw "Missing environment variable: hostname";
 
     try {
       const client = http2.connect(hostname, {
@@ -151,7 +148,7 @@ export const check = onRequest(
         connection.tlsDone = getElapsed();
       });
 
-      const requestPromises = resourcesToFetch.map((resource) => {
+      const requestPromises = resources.map((resource) => {
         const { path, label, logToDatabase: isLoggedToDatabase } = resource;
         const entry = { filename: label } as RequestEntry;
 
@@ -195,7 +192,7 @@ export const check = onRequest(
       handleError(error as Error, connection);
     }
 
-    await logToDatabase(startTime, connection, requests);
+    await logToDatabase(startTime, connection, requests, resources);
 
     response.setHeader("Cache-Control", "no-store").send(`ok at ${Date.now()}`);
   }

@@ -2,8 +2,8 @@ import { adapt, managedwriter, protos } from "@google-cloud/bigquery-storage";
 
 import { error } from "firebase-functions/logger";
 
-import { ConnectionEntry, RequestEntry, ERROR, ErrorEntry } from "./definitions";
-import { bigQueryOptions, resourcesToFetch } from "./config";
+import { ConnectionEntry, RequestEntry, Resource, ERROR, ErrorEntry } from "./definitions";
+import { bigQueryOptions } from "./config";
 
 const { WriterClient, JSONWriter } = managedwriter;
 
@@ -79,14 +79,15 @@ const toJsonString = (value: object | object[] | undefined) => {
 export const logToDatabase = async (
   startTime: number,
   connection: ConnectionEntry,
-  requests: RequestEntry[]
+  requests: RequestEntry[],
+  resources: Resource[]
 ) => {
   if (destinationTable == null) return;
 
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
 
-  const shouldLogToDatabase = resourcesToFetch.reduce(
+  const shouldLogToDatabase = resources.reduce(
     (shouldLogToDatabase, resource) => {
       if (resource.logToDatabase === true) shouldLogToDatabase[resource.label] = true;
       return shouldLogToDatabase;

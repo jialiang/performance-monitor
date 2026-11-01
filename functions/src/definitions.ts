@@ -4,6 +4,12 @@ export type ERROR = NodeJS.ErrnoException | Error;
 
 export type ResponseHeaders = http2.IncomingHttpHeaders & http2.IncomingHttpStatusHeader;
 
+export type Resource = {
+  path: string;
+  label: string;
+  logToDatabase?: boolean;
+};
+
 export type ErrorEntry = {
   [key: string]: string | number | boolean;
 } & {
