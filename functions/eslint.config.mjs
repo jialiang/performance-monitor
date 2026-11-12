@@ -1,11 +1,9 @@
-import globals from "globals";
-import importX from "eslint-plugin-import-x";
 import js from "@eslint/js";
-import tseslint from "typescript-eslint";
-
 import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
-
+import importX from "eslint-plugin-import-x";
 import { defineConfig, globalIgnores } from "eslint/config";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default defineConfig([
   globalIgnores(["lib/"]),

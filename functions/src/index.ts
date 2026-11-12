@@ -1,23 +1,22 @@
-import { GoogleAuth, gaxios } from "google-auth-library";
-
-import { onRequest } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import { initializeApp } from "firebase-admin/app";
-import { error } from "firebase-functions/logger";
-
 import dns from "dns";
 import http2 from "http2";
 
-import { handleError, logToDatabase } from "./util";
-import { getResourcesToFetch } from "./remote-config";
-import { ConnectionEntry, RequestEntry } from "./definitions";
+import { initializeApp } from "firebase-admin/app";
+import { error } from "firebase-functions/logger";
+import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { gaxios, GoogleAuth } from "google-auth-library";
+
 import {
-  schedulerServiceAccount,
-  hostname,
   callRegions,
-  projectNumber,
   checkOptions,
+  hostname,
+  projectNumber,
+  schedulerServiceAccount,
 } from "./config";
+import { ConnectionEntry, RequestEntry } from "./definitions";
+import { getResourcesToFetch } from "./remote-config";
+import { handleError, logToDatabase } from "./util";
 
 const googleAuth = new GoogleAuth();
 

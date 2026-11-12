@@ -1,9 +1,8 @@
 import { adapt, managedwriter, protos } from "@google-cloud/bigquery-storage";
-
 import { error } from "firebase-functions/logger";
 
-import { ConnectionEntry, RequestEntry, Resource, ERROR, ErrorEntry } from "./definitions";
 import { bigQueryOptions } from "./config";
+import { ConnectionEntry, ERROR, ErrorEntry, RequestEntry, Resource } from "./definitions";
 
 const { WriterClient, JSONWriter } = managedwriter;
 

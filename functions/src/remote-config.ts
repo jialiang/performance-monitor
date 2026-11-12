@@ -1,4 +1,4 @@
-import { ServerTemplate, getRemoteConfig } from "firebase-admin/remote-config";
+import { getRemoteConfig, ServerTemplate } from "firebase-admin/remote-config";
 import { error } from "firebase-functions/logger";
 
 import { Resource } from "./definitions";
