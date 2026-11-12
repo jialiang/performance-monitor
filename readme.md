@@ -17,6 +17,12 @@ The information collected is sent to a BigQuery table for storage (optional, to 
 
 Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) and the default amount of memory (256MB).
 
+## Requirements
+
+- Node.js 22 or later. The functions themselves run on Node.js 24 in the cloud, as set in `firebase.json`.
+- (optional) [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud` and `bq`). Potentially needed to bypass Region Limits, grant service account access or use BigQuery logging.
+- (optional) Java 21 or later, if you run the local emulator.
+
 ## Install
 
 1. Run `npm install` in root and in the `/functions` path.
@@ -80,7 +86,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 1. Run `npm run build:watch` in the `/functions` path.
 2. Run `npx firebase emulators:start` in root.
 
-Make sure Java is installed. It is required by the pubsub emulator. You can check by running `java --version`.
+Make sure Java 21 or later is installed. It is required by the pubsub emulator. You can check by running `java --version`.
 
 ## Deploy
 
