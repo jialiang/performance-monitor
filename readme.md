@@ -73,10 +73,9 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
    If needed, grant the function's service account write access:
 
    ```
-   bq add-iam-policy-binding \
-     --member="serviceAccount:<FUNCTION_SERVICE_ACCOUNT>" \
-     --role="roles/bigquery.dataEditor" \
-     <project>:monitoring
+   bq query --use_legacy_sql=false \
+     'GRANT `roles/bigquery.dataEditor` ON SCHEMA `<project>.monitoring`
+      TO "serviceAccount:<FUNCTION_SERVICE_ACCOUNT>"'
    ```
 
    Rows older than 7 days are pruned automatically by partition expiration. Set the `BIGQUERY_*` keys in `env.jsonc` (see `example.env.jsonc`) to enable logging.
