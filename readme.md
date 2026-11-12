@@ -88,6 +88,20 @@ Make sure Java is installed. It is required by the pubsub emulator. You can chec
 2. Run `npx firebase use --add <project-id>` to set the active project.
 3. Run `npx firebase deploy` in root.
 
+## Region Limits
+
+Google Cloud sometimes limit the count of regions that you can deploy to, even with a billing account attached. There are 2 parts to the limit: Cloud Build and Cloud Run.
+
+Cloud Build builds your code while Cloud Run is the platform that runs your code. If your quota for the latter is higher than the former, you can skip the build step by cloning the image Firebase already built to the extra regions:
+
+1. Add the extra regions to `CALL_REGIONS` only (not `DEPLOY_REGIONS`) in `env.jsonc`.
+2. Run `npx firebase deploy` in root so the trigger starts calling them.
+3. Run `npm run clone` in the `/functions` path. For every region in `CALL_REGIONS` that isn't in `DEPLOY_REGIONS`, it deploys the image from the first deploy region as a plain Cloud Run service with the same settings, then lets the scheduler's service account call it.
+
+The trigger logs errors for the extra regions between steps 2 and 3 until their clones exist.
+
+Firebase doesn't manage these clones, so run `npm run clone` after each `firebase deploy` to move them to the new image. To move a region into `DEPLOY_REGIONS` later, delete its clone first with `gcloud run services delete check --region=<region>` or Firebase can't create the function there.
+
 ## Motivation
 
 The motivation for creating this service is to prevent CDN cache eviction of critical resources. CDNs will remove low demand resources from their edge servers periodically. This removal might occur even if the resource hasn't gone stale yet. This can cause low traffic websites to lose the benefits of a CDN even if they are set up with one. Creating artificial demand is one way to solve this problem.

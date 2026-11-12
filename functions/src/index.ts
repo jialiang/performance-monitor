@@ -11,7 +11,13 @@ import http2 from "http2";
 import { handleError, logToDatabase } from "./util";
 import { getResourcesToFetch } from "./remote-config";
 import { ConnectionEntry, RequestEntry } from "./definitions";
-import { schedulerServiceAccount, functionServiceAccount, hostname, regions } from "./config";
+import {
+  schedulerServiceAccount,
+  hostname,
+  callRegions,
+  projectNumber,
+  checkOptions,
+} from "./config";
 
 const googleAuth = new GoogleAuth();
 
@@ -34,8 +40,8 @@ export const triggerChecks = onSchedule(
     const pendingRegions = {} as { [key: string]: string };
 
     const job = async () => {
-      const promises = regions.map(async (region) => {
-        const url = `https://${region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/check`;
+      const promises = callRegions.map(async (region) => {
+        const url = `https://check-${projectNumber}.${region}.run.app`;
 
         if (process.env.FUNCTIONS_EMULATOR) {
           console.log(`Fetch ${url} ran.`);
@@ -97,103 +103,93 @@ export const triggerChecks = onSchedule(
   }
 );
 
-export const check = onRequest(
-  {
-    region: regions,
-    timeoutSeconds: 20,
-    maxInstances: 1,
-    cpu: 0.25,
-    serviceAccount: functionServiceAccount,
-    invoker: schedulerServiceAccount,
-  },
-  async (request, response) => {
-    if (!hostname) throw "Missing environment variable: hostname";
+export const check = onRequest(checkOptions, async (request, response) => {
+  if (!hostname) throw "Missing environment variable: hostname";
 
-    const resources = await getResourcesToFetch();
+  const resources = await getResourcesToFetch();
 
-    const startTime = Date.now();
-    const getElapsed = () => Date.now() - startTime;
+  const startTime = Date.now();
+  const getElapsed = () => Date.now() - startTime;
 
-    const connection = {} as ConnectionEntry;
-    let requests = [] as RequestEntry[];
+  const connection = {} as ConnectionEntry;
+  let requests = [] as RequestEntry[];
 
-    try {
-      const client = http2.connect(hostname, {
-        lookup: (hostname, family, callback) => {
-          connection.dnsLookupStart = getElapsed();
-          return dns.lookup(hostname, family, callback);
-        },
-      });
+  try {
+    const client = http2.connect(hostname, {
+      lookup: (hostname, family, callback) => {
+        connection.dnsLookupStart = getElapsed();
+        return dns.lookup(hostname, family, callback);
+      },
+    });
 
-      client.on("error", (error) => {
+    client.on("error", (error) => {
+      handleError(error, connection);
+    });
+
+    const { socket } = client;
+
+    socket.on("lookup", (error) => {
+      if (error) {
         handleError(error, connection);
-      });
+        return;
+      }
 
-      const { socket } = client;
+      connection.dnsLookupEnd = getElapsed();
+    });
 
-      socket.on("lookup", (error) => {
-        if (error) {
-          handleError(error, connection);
-          return;
-        }
+    socket.on("connect", () => {
+      connection.tcpDone = getElapsed();
+    });
 
-        connection.dnsLookupEnd = getElapsed();
-      });
+    socket.on("secureConnect", () => {
+      connection.tlsDone = getElapsed();
+    });
 
-      socket.on("connect", () => {
-        connection.tcpDone = getElapsed();
-      });
+    const requestPromises = resources.map((resource) => {
+      const { path, label, logToDatabase: isLoggedToDatabase } = resource;
+      const entry = { filename: label } as RequestEntry;
 
-      socket.on("secureConnect", () => {
-        connection.tlsDone = getElapsed();
-      });
+      return new Promise((resolve) => {
+        // Unlogged resources are only fetched to keep them in the CDN cache.
+        // A HEAD request still counts as a cache hit but skips downloading the body.
+        const stream = client.request({
+          ":method": isLoggedToDatabase ? "GET" : "HEAD",
+          ":path": path,
+          "accept-encoding": "gzip, deflate",
+          "Fastly-Debug": 1,
+        });
 
-      const requestPromises = resources.map((resource) => {
-        const { path, label, logToDatabase: isLoggedToDatabase } = resource;
-        const entry = { filename: label } as RequestEntry;
+        stream.on("ready", () => {
+          entry.requestSent = getElapsed();
+        });
 
-        return new Promise((resolve) => {
-          // Unlogged resources are only fetched to keep them in the CDN cache.
-          // A HEAD request still counts as a cache hit but skips downloading the body.
-          const stream = client.request({
-            ":method": isLoggedToDatabase ? "GET" : "HEAD",
-            ":path": path,
-            "accept-encoding": "gzip, deflate",
-            "Fastly-Debug": 1,
-          });
+        stream.on("response", (headers) => {
+          entry.responseStart = getElapsed();
+          entry.responseHeaders = headers;
+        });
 
-          stream.on("ready", () => {
-            entry.requestSent = getElapsed();
-          });
+        stream.on("data", () => {});
 
-          stream.on("response", (headers) => {
-            entry.responseStart = getElapsed();
-            entry.responseHeaders = headers;
-          });
+        stream.on("end", () => {
+          entry.responseEnd = getElapsed();
+          resolve(entry);
+        });
 
-          stream.on("data", () => {});
+        stream.on("error", (error) => {
+          handleError(error, entry);
+          resolve(entry);
+        });
+      }) as Promise<RequestEntry>;
+    });
 
-          stream.on("end", () => {
-            entry.responseEnd = getElapsed();
-            resolve(entry);
-          });
+    requests = await Promise.all(requestPromises);
 
-          stream.on("error", (error) => {
-            handleError(error, entry);
-            resolve(entry);
-          });
-        }) as Promise<RequestEntry>;
-      });
-
-      requests = await Promise.all(requestPromises);
-
-      client.close();
-    } catch (error) {
-      handleError(error as Error, connection);
-    }
-
-    await logToDatabase(startTime, connection, requests, resources);
-
-    response.setHeader("Cache-Control", "no-store").send(`ok at ${Date.now()}`);
+    client.close();
+  } catch (error) {
+    handleError(error as Error, connection);
   }
-);
+
+  await logToDatabase(startTime, connection, requests, resources);
+
+  response.setHeader("Cache-Control", "no-store").send(`ok at ${Date.now()}`);
+});
