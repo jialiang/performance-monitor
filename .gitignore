@@ -68,3 +68,6 @@ env.jsonc
 
 # BigQuery view definition (names the monitored resources)
 functions/bigquery/fetch_timings.sql
+
+# macOS Finder folder metadata
+.DS_Store
