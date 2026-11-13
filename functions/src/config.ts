@@ -26,7 +26,9 @@ export const checkOptions: HttpsOptions = {
   cpu: 0.25,
   memory: "256MiB",
   serviceAccount: functionServiceAccount,
-  invoker: schedulerServiceAccount,
+  // Without a scheduler account, triggerChecks runs as the default compute account.
+  // Naming that account keeps check private: Firebase makes it public otherwise.
+  invoker: schedulerServiceAccount || `${projectNumber}-compute@developer.gserviceaccount.com`,
 };
 
 export const bigQueryOptions = {

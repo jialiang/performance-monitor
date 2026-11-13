@@ -49,7 +49,7 @@ for (const region of cloneRegions) {
       `--region=${region}`,
       `--image=${image}`,
       ...(baseImage ? [`--base-image=${baseImage}`] : []),
-      `--service-account=${checkOptions.serviceAccount}`,
+      ...(checkOptions.serviceAccount ? [`--service-account=${checkOptions.serviceAccount}`] : []),
       "--no-allow-unauthenticated",
       `--cpu=${checkOptions.cpu}`,
       `--memory=${checkOptions.memory.replace(/B$/, "")}`,
