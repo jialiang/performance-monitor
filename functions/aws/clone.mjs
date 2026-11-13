@@ -1,8 +1,9 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import { awsRegions } from "../lib/config.js";
 
-const awsDir = new URL(".", import.meta.url).pathname;
+const awsDir = fileURLToPath(new URL(".", import.meta.url));
 
 // SAM's upload bucket is shared by every SAM project in the region,
 // so this project uploads under its own prefix and only cleans that up.
@@ -14,6 +15,11 @@ const aws = (region, args) => {
   });
 
   return output.trim() ? JSON.parse(output) : null;
+};
+
+// On Windows sam is a batch file (sam.cmd), which only runs through a shell.
+const sam = (args) => {
+  execSync(["sam", ...args].join(" "), { cwd: awsDir, stdio: "inherit" });
 };
 
 // Delete this project's uploads after deployment.
@@ -52,12 +58,10 @@ if (awsRegions.length === 0) {
   process.exit(0);
 }
 
-execFileSync("sam", ["build"], { cwd: awsDir, stdio: "inherit" });
+sam(["build"]);
 
 for (const region of awsRegions) {
   console.log(`\nDeploying to ${region}`);
-  const deployArgs = ["deploy", "--region", region, "--s3-prefix", uploadPrefix];
-  execFileSync("sam", deployArgs, { cwd: awsDir, stdio: "inherit" });
+  sam(["deploy", "--region", region, "--s3-prefix", uploadPrefix]);
   emptyUploadBucket(region);
 }
-
