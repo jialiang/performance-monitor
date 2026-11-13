@@ -83,8 +83,10 @@ export const logToDatabase = async (
 ) => {
   if (destinationTable == null) return;
 
+  // For Google Cloud, use EVENTARC_CLOUD_EVENT_SOURCE
+  // For AWS, use CHECK_REGION
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
-  const region = eventContext.split("/")[3] || "UNKNOWN_REGION";
+  const region = process.env.CHECK_REGION || eventContext.split("/")[3] || "UNKNOWN_REGION";
 
   const shouldLogToDatabase = resources.reduce(
     (shouldLogToDatabase, resource) => {

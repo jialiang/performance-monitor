@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Runs the performance check once a minute in one AWS region.
+
+Parameters:
+  GoogleProjectId:
+    Type: String
+  FunctionServiceAccount:
+    Type: String
+
+Resources:
+  CheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: check
+      # `sam build` packages this folder with npm pack.
+      # package.json's files field supersedes .gitignore.
+      CodeUri: ../
+      Handler: aws/handler.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 20
+      Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${FunctionServiceAccount}
+      Environment:
+        Variables:
+          GCLOUD_PROJECT: !Ref GoogleProjectId
+          GOOGLE_APPLICATION_CREDENTIALS: /var/task/aws/google-credentials.json
+          CHECK_REGION: !Sub aws-${AWS::Region}
+      Events:
+        EveryMinute:
+          Type: ScheduleV2
+          Properties:
+            Name: check
+            ScheduleExpression: rate(1 minute)
+            FlexibleTimeWindow:
+              Mode: "OFF"
+            RetryPolicy:
+              MaximumRetryAttempts: 0
+
+  # Lambda would otherwise create this log group itself and keep logs forever.
+  # 7 days matches how long BigQuery keeps its rows.
+  CheckLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/check
+      RetentionInDays: 7

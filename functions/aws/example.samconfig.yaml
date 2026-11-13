@@ -1,0 +1,20 @@
+# Create samconfig.yaml from this template
+version: 0.1
+
+default:
+  deploy:
+    parameters:
+      stack_name: check
+      # Auto create a S3 bucket to upload to for Lambda to pick up.
+      resolve_s3: true
+      confirm_changeset: false
+      fail_on_empty_changeset: false
+      disable_rollback: true
+      # Lets the stack create the schedule's IAM role.
+      capabilities: CAPABILITY_IAM
+
+      # Set these values:
+
+      parameter_overrides:
+        GoogleProjectId: project-1234
+        FunctionServiceAccount: check-service-account

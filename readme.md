@@ -22,6 +22,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 - Node.js 22 or later. The functions themselves run on Node.js 24 in the cloud, as set in `firebase.json`.
 - (optional) [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) (`gcloud` and `bq`). Potentially needed to bypass Region Limits, grant service account access or use BigQuery logging.
 - (optional) Java 21 or later, if you run the local emulator.
+- (optional) [AWS CLI](https://aws.amazon.com/cli/) and [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) (`aws` and `sam`). If deploying to AWS Lambda.
 
 ## Install
 
@@ -29,7 +30,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
 2. Run `npx firebase login`.
 3. Create a file `env.jsonc` in `/functions` for your environment variables. Refer to `example.env.jsonc` for valid keys and values.
 4. Set the list of resources to fetch in Firebase Remote Config, so it can be changed without a deploy.
-   1. On your Firebase console's sidebar, go to DevOps & Engagement -> Remote Config
+   1. On your Firebase console's sidebar, go to DevOps & Engagement → Remote Config
    1. Choose server from the dropdown.
    1. Create a parameter named `env`, typed `JSON` and the following shape:
 
@@ -53,7 +54,7 @@ Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) 
         --role="roles/cloudconfig.viewer"
       ```
 
-5. (Optional) Set up BigQuery for storage. Each check writes one row, with its per-resource requests nested in a `requests` array.
+5. (Optional) Set up BigQuery for storage. Each check writes one row, each resource request is nested in a `requests` array.
 
    ```
    # Dataset
@@ -106,6 +107,58 @@ Cloud Build builds your code while Cloud Run is the platform that runs your code
 The trigger logs errors for the extra regions between steps 2 and 3 until their clones exist.
 
 Firebase doesn't manage these clones, so run `npm run clone` after each `firebase deploy` to move them to the new image. To move a region into `DEPLOY_REGIONS` later, delete its clone first with `gcloud run services delete check --region=<region>` or Firebase can't create the function there.
+
+## AWS
+
+Given the issues in Region Limits, deployment to AWS Lambda is added as a alternative. Logging to the same BigQuery table is supported, with regions labelled like `aws-ap-southeast-5`.
+
+Note that Lambda functions are configured with the same amount of memory (256MB) as the Cloud Run functions. However AWS does not allow configuring vCPU amount directly and scale based on memory, so it gets 0.25 vCPU instead of 0.5.
+
+### Setup
+
+0. Make sure the steps in the Install section above have been performed.
+1. Create a service account on AWS for the Lambda function in IAM → Roles:
+   - Trusted entity type: AWS Service
+   - Use case: Lambda
+   - Permission policies: `AWSLambdaBasicExecutionRole`
+   - Note the ARN value after creation.
+2. In Google Cloud, go to IAM & Admin → Workload Identity Pools.
+3. Create a new identity pool.
+   - Set a identity pool name.
+   - Select AWS as provider.
+   - Set a provider name.
+   - Enter your AWS account ID.
+   - Ignore "Configure provider attributes".
+4. Click the "Grant access" button.
+   - Choose service account impersonation.
+   - Select the service account that AWS Lambda should assume. It should have the same access as `FUNCTION_SERVICE_ACCOUNT`:
+     - Remote Config VIEWER.
+     - (optional) BigQuery dataset WRITER.
+   - Set the principal name to "aws_role"
+   - Set the principal value to the ARN of the AWS role who will be doing the assuming but modify the string:
+     - Change `iam` to `sts`.
+     - Change `role/` to `assumed-role/`.
+5. In the dialog that follows, download the config file. Save it as `functions/aws/google-credentials.json`. It holds no secret.
+6. Refer to `functions/aws/example.samconfig.yaml` to create `functions/aws/samconfig.yaml`.
+7. Add in `AWS_REGIONS` in `env.jsonc`
+
+### Deploy
+
+1. Run `npm run clone:aws` in the `/functions` path to create or update. It runs `sam build` once, then `sam deploy` in each region.
+
+To remove a region:
+
+1. Remove it from `AWS_REGIONS` in `env.jsonc` so the next deploy doesn't recreate it.
+2. Run `sam delete --stack-name check --region <region> --no-prompts` in the `/functions/aws` path.
+
+If a region is used by nothing else at all:
+
+1. Do `aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region <region>` to delete the stack SAM created. Note that this stack is shared with all SAM deployments for that region without an explicitly defined S3 bucket. The stack is all resources SAM creates automatically to facilitate the deployment.
+
+To remove AWS entirely, do the above for every region, then:
+
+1. Delete the IAM role from Setup step 1.
+2. In Google Cloud, delete the workload identity pool and the service account from Setup steps 3 and 4.
 
 ## Motivation
 

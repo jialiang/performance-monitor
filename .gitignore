@@ -66,6 +66,11 @@ node_modules/
 .env
 env.jsonc
 
+# AWS deploy: project-specific settings and build output
+functions/aws/google-credentials.json
+functions/aws/samconfig.yaml
+functions/aws/.aws-sam/
+
 # BigQuery view definition (names the monitored resources)
 functions/bigquery/fetch_timings.sql
 

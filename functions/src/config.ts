@@ -16,6 +16,8 @@ export const hostname = env.HOSTNAME;
 export const deployRegions = env.DEPLOY_REGIONS as string[];
 export const callRegions = env.CALL_REGIONS as string[];
 
+export const awsRegions = (env.AWS_REGIONS || []) as string[];
+
 export const projectNumber = env.PROJECT_NUMBER as string;
 
 export const checkOptions: HttpsOptions = {

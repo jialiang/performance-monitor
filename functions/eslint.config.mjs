@@ -6,7 +6,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["lib/"]),
+  globalIgnores(["lib/", "aws/.build/", "aws/.aws-sam/"]),
   {
     files: ["**/*.{js,mjs,ts}"],
     plugins: { js },
