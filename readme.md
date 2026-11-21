@@ -18,7 +18,7 @@ In the process, they will record the following network timings and metadata:
 
 The information collected is sent to a BigQuery table for storage (optional, to be set up separately).
 
-Each serverless function is allocated 0.25 vCPU and the default amount of memory (256MB).
+Each serverless function is allocated 0.5 vCPU and the default amount of memory (256MB).
 
 ## Requirements
 
@@ -113,9 +113,9 @@ Firebase doesn't manage these clones, so run `npm run clone` after each `firebas
 
 ## Timing Accuracy
 
-With 0.25 vCPU, the function can only use a quarter of a CPU each scheduling period. Once it has used its share, it is frozen until the next period starts. As far as I know, a scheduling period is 100ms for Cloud Run and 20ms for Lambda.
+With 0.5 vCPU, the function can only use half a CPU each scheduling period. Once it has used its share, it is frozen until the next period starts. As far as I know, a scheduling period is 100ms for Cloud Run and 20ms for Lambda.
 
-You'd think several dozen HTTP requests shouldn't exhaust 0.25 vCPU but sometimes it does. The how and why is fuzzy but this seems to be a cloud provider hardware and execution environment issue. Even running the same code on different Google regions results in different CPU utilization percentages.
+You'd think several dozen HTTP requests shouldn't exhaust 0.5 vCPU but sometimes it does. The how and why is fuzzy but this seems to be a cloud provider hardware and execution environment issue. Even running the same code on different Google regions results in different CPU utilization percentages.
 
 To see how badly this affects you, sum every HTTP request component and compare it with the Total Time to Fetch. If there's a huge difference, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
 
@@ -125,7 +125,7 @@ Given the test in the previous paragraph, I find AWS Lambda to produce more accu
 
 Given the issues in Region Limits on Cloud Run, deployment to AWS Lambda is added as an alternative. Logging to the same BigQuery table is supported, with regions labelled like `aws-ap-southeast-5`.
 
-Note that Lambda functions are configured with the same amount of memory (256MB) as the Cloud Run functions. However AWS does not allow configuring vCPU amount directly and scales it with memory (1,769MB is one full vCPU), so it gets about 0.15 vCPU instead of 0.25.
+Note that AWS does not allow configuring vCPU amount directly and scales it with memory (1,769MB is one full vCPU). Lambda functions are configured with 1024MB, so they get about 0.58 vCPU, close to the Cloud Run functions' 0.5.
 
 ### Setup
 

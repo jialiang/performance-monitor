@@ -19,7 +19,7 @@ Resources:
       Handler: aws/handler.handler
       Runtime: nodejs24.x
       Architectures: [arm64]
-      MemorySize: 256
+      MemorySize: 1024
       Timeout: 20
       Role: !Sub arn:aws:iam::${AWS::AccountId}:role/${FunctionServiceAccount}
       Environment:

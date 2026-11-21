@@ -25,7 +25,7 @@ export const checkOptions: HttpsOptions = {
   timeoutSeconds: 20,
   maxInstances: 1,
   concurrency: 1,
-  cpu: 0.25,
+  cpu: 0.5,
   memory: "256MiB",
   serviceAccount: functionServiceAccount,
   // Without a scheduler account, triggerChecks runs as the default compute account.
