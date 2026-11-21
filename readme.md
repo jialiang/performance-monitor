@@ -97,6 +97,10 @@ Make sure Java 21 or later is installed. It is required by the pubsub emulator. 
 2. Run `npx firebase use --add <project-id>` to set the active project.
 3. Run `npx firebase deploy` in root.
 
+## Pricing
+
+With Firebase/Google Cloud's free tier, the part with no free allowance is outbound bandwidth for regions outside North America, incurred when making HTTP requests. It will likely cost only pennies per month but if you want to keep it completely free, the AWS route is mandatory.
+
 ## Region Limits
 
 Google Cloud sometimes limit the count of regions that you can deploy to, even with a billing account attached. There are 2 parts to the limit: Cloud Build and Cloud Run.
