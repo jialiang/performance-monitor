@@ -1,5 +1,8 @@
 # Performance Monitor on Firebase
 
+> [!WARNING]
+> Recent discoveries have placed Firebase Cloud Functions at a disadvantage compared to AWS Lambdas. See [Region Limits](#region-limits) and [Timing Accuracy](#timing-accuracy) below. However, both still serve the core purpose outlined in [Motivation](#motivation).
+
 Deploys 1 or more serverless functions across different cities and 1 cloud scheduler.
 
 Every minute, the scheduler will trigger the serverless functions. These serverless functions will each asynchronously fetch the designated resources using the HTTP2 protocol.
@@ -15,7 +18,7 @@ In the process, they will record the following network timings and metadata:
 
 The information collected is sent to a BigQuery table for storage (optional, to be set up separately).
 
-Each serverless function is allocated 0.5 vCPU (1 vCPU is equivalent to 2.4Ghz) and the default amount of memory (256MB).
+Each serverless function is allocated 0.25 vCPU and the default amount of memory (256MB).
 
 ## Requirements
 
@@ -108,11 +111,21 @@ The trigger logs errors for the extra regions between steps 2 and 3 until their 
 
 Firebase doesn't manage these clones, so run `npm run clone` after each `firebase deploy` to move them to the new image. To move a region into `DEPLOY_REGIONS` later, delete its clone first with `gcloud run services delete check --region=<region>` or Firebase can't create the function there.
 
+## Timing Accuracy
+
+With 0.25 vCPU, the function can only use a quarter of a CPU each scheduling period. Once it has used its share, it is frozen until the next period starts. As far as I know, a scheduling period is 100ms for Cloud Run and 20ms for Lambda.
+
+You'd think several dozen HTTP requests shouldn't exhaust 0.25 vCPU but sometimes it does. The how and why is fuzzy but this seems to be a cloud provider hardware and execution environment issue. Even running the same code on different Google regions results in different CPU utilization percentages.
+
+To see how badly this affects you, sum every HTTP request component and compare it with the Total Time to Fetch. If there's a huge difference, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
+
+Given the test in the previous paragraph, I find AWS Lambda to produce more accurate numbers.
+
 ## AWS
 
-Given the issues in Region Limits, deployment to AWS Lambda is added as a alternative. Logging to the same BigQuery table is supported, with regions labelled like `aws-ap-southeast-5`.
+Given the issues in Region Limits on Cloud Run, deployment to AWS Lambda is added as an alternative. Logging to the same BigQuery table is supported, with regions labelled like `aws-ap-southeast-5`.
 
-Note that Lambda functions are configured with the same amount of memory (256MB) as the Cloud Run functions. However AWS does not allow configuring vCPU amount directly and scale based on memory, so it gets 0.25 vCPU instead of 0.5.
+Note that Lambda functions are configured with the same amount of memory (256MB) as the Cloud Run functions. However AWS does not allow configuring vCPU amount directly and scales it with memory (1,769MB is one full vCPU), so it gets about 0.15 vCPU instead of 0.25.
 
 ### Setup
 
