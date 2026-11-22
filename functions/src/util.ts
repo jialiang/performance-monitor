@@ -69,6 +69,10 @@ export const handleError = (error: ERROR, parent?: ConnectionEntry | RequestEntr
   return entry;
 };
 
+export const roundToMicroseconds = (milliseconds: number) => Math.round(milliseconds * 1000) / 1000;
+
+export const getElapsed = (startMark: number) => roundToMicroseconds(performance.now() - startMark);
+
 const toJsonString = (value: object | object[] | undefined) => {
   if (value == null) return null;
   if (Array.isArray(value) && value.length === 0) return null;
@@ -104,6 +108,10 @@ export const logToDatabase = async (
     dnsLookupEnd: connection.dnsLookupEnd ?? null,
     tcpDone: connection.tcpDone ?? null,
     tlsDone: connection.tlsDone ?? null,
+    maxStall: connection.maxStall ?? null,
+    dnsMaxStall: connection.dnsMaxStall ?? null,
+    tcpMaxStall: connection.tcpMaxStall ?? null,
+    tlsMaxStall: connection.tlsMaxStall ?? null,
     errors: toJsonString(connection.errors),
     requests: requests
       .filter((request) => shouldLogToDatabase[request.filename])
@@ -112,6 +120,8 @@ export const logToDatabase = async (
         requestSent: request.requestSent ?? null,
         responseStart: request.responseStart ?? null,
         responseEnd: request.responseEnd ?? null,
+        requestMaxStall: request.requestMaxStall ?? null,
+        downloadMaxStall: request.downloadMaxStall ?? null,
         responseHeaders: toJsonString(request.responseHeaders),
         errors: toJsonString(request.errors),
       })),

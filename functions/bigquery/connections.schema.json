@@ -1,10 +1,10 @@
 [
   { "name": "region", "type": "STRING", "mode": "NULLABLE" },
   { "name": "startTime", "type": "TIMESTAMP", "mode": "REQUIRED" },
-  { "name": "dnsLookupStart", "type": "INT64", "mode": "NULLABLE" },
-  { "name": "dnsLookupEnd", "type": "INT64", "mode": "NULLABLE" },
-  { "name": "tcpDone", "type": "INT64", "mode": "NULLABLE" },
-  { "name": "tlsDone", "type": "INT64", "mode": "NULLABLE" },
+  { "name": "dnsLookupStart", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "dnsLookupEnd", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "tcpDone", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "tlsDone", "type": "FLOAT64", "mode": "NULLABLE" },
   { "name": "errors", "type": "STRING", "mode": "NULLABLE" },
   {
     "name": "requests",
@@ -12,11 +12,17 @@
     "mode": "REPEATED",
     "fields": [
       { "name": "filename", "type": "STRING", "mode": "NULLABLE" },
-      { "name": "requestSent", "type": "INT64", "mode": "NULLABLE" },
-      { "name": "responseStart", "type": "INT64", "mode": "NULLABLE" },
-      { "name": "responseEnd", "type": "INT64", "mode": "NULLABLE" },
+      { "name": "requestSent", "type": "FLOAT64", "mode": "NULLABLE" },
+      { "name": "responseStart", "type": "FLOAT64", "mode": "NULLABLE" },
+      { "name": "responseEnd", "type": "FLOAT64", "mode": "NULLABLE" },
       { "name": "responseHeaders", "type": "STRING", "mode": "NULLABLE" },
-      { "name": "errors", "type": "STRING", "mode": "NULLABLE" }
+      { "name": "errors", "type": "STRING", "mode": "NULLABLE" },
+      { "name": "requestMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
+      { "name": "downloadMaxStall", "type": "FLOAT64", "mode": "NULLABLE" }
     ]
-  }
+  },
+  { "name": "maxStall", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "dnsMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "tcpMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "tlsMaxStall", "type": "FLOAT64", "mode": "NULLABLE" }
 ]

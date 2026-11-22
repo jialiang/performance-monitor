@@ -4,7 +4,8 @@ import http2 from "http2";
 import { hostname } from "./config";
 import { ConnectionEntry, RequestEntry } from "./definitions";
 import { getResourcesToFetch } from "./remote-config";
-import { handleError, logToDatabase } from "./util";
+import { startStallMonitor } from "./stall-monitor";
+import { getElapsed, handleError, logToDatabase } from "./util";
 
 export const runCheck = async () => {
   if (!hostname) throw "Missing environment variable: hostname";
@@ -12,7 +13,9 @@ export const runCheck = async () => {
   const resources = await getResourcesToFetch();
 
   const startTime = Date.now();
-  const getElapsed = () => Date.now() - startTime;
+  const startMark = performance.now();
+
+  const stallMonitor = startStallMonitor(startMark);
 
   const connection = {} as ConnectionEntry;
   let requests = [] as RequestEntry[];
@@ -20,7 +23,7 @@ export const runCheck = async () => {
   try {
     const client = http2.connect(hostname, {
       lookup: (hostname, family, callback) => {
-        connection.dnsLookupStart = getElapsed();
+        connection.dnsLookupStart = getElapsed(startMark);
         return dns.lookup(hostname, family, callback);
       },
     });
@@ -37,15 +40,15 @@ export const runCheck = async () => {
         return;
       }
 
-      connection.dnsLookupEnd = getElapsed();
+      connection.dnsLookupEnd = getElapsed(startMark);
     });
 
     socket.on("connect", () => {
-      connection.tcpDone = getElapsed();
+      connection.tcpDone = getElapsed(startMark);
     });
 
     socket.on("secureConnect", () => {
-      connection.tlsDone = getElapsed();
+      connection.tlsDone = getElapsed(startMark);
     });
 
     const requestPromises = resources.map((resource) => {
@@ -63,18 +66,18 @@ export const runCheck = async () => {
         });
 
         stream.on("ready", () => {
-          entry.requestSent = getElapsed();
+          entry.requestSent = getElapsed(startMark);
         });
 
         stream.on("response", (headers) => {
-          entry.responseStart = getElapsed();
+          entry.responseStart = getElapsed(startMark);
           entry.responseHeaders = headers;
         });
 
         stream.on("data", () => {});
 
         stream.on("end", () => {
-          entry.responseEnd = getElapsed();
+          entry.responseEnd = getElapsed(startMark);
           resolve(entry);
         });
 
@@ -90,6 +93,21 @@ export const runCheck = async () => {
     client.close();
   } catch (error) {
     handleError(error as Error, connection);
+  }
+
+  stallMonitor.stop();
+
+  const { getMaxStallBetween } = stallMonitor;
+  const { dnsLookupStart, dnsLookupEnd, tcpDone, tlsDone } = connection;
+
+  connection.maxStall = getMaxStallBetween(0, Infinity);
+  connection.dnsMaxStall = getMaxStallBetween(dnsLookupStart, dnsLookupEnd);
+  connection.tcpMaxStall = getMaxStallBetween(dnsLookupEnd, tcpDone);
+  connection.tlsMaxStall = getMaxStallBetween(tcpDone, tlsDone);
+
+  for (const request of requests) {
+    request.requestMaxStall = getMaxStallBetween(request.requestSent, request.responseStart);
+    request.downloadMaxStall = getMaxStallBetween(request.responseStart, request.responseEnd);
   }
 
   await logToDatabase(startTime, connection, requests, resources);

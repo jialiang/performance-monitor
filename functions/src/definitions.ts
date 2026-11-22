@@ -21,6 +21,10 @@ export type ConnectionEntry = {
   dnsLookupEnd?: number;
   tcpDone?: number;
   tlsDone?: number;
+  maxStall?: number;
+  dnsMaxStall?: number;
+  tcpMaxStall?: number;
+  tlsMaxStall?: number;
   errors?: ErrorEntry[];
 };
 
@@ -29,6 +33,8 @@ export type RequestEntry = {
   requestSent?: number;
   responseStart?: number;
   responseEnd?: number;
+  requestMaxStall?: number;
+  downloadMaxStall?: number;
   responseHeaders?: ResponseHeaders;
   errors?: ErrorEntry[];
 };

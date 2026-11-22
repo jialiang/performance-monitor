@@ -1,8 +1,5 @@
 # Performance Monitor on Firebase
 
-> [!WARNING]
-> Recent discoveries have placed Firebase Cloud Functions at a disadvantage compared to AWS Lambdas. See [Region Limits](#region-limits) and [Timing Accuracy](#timing-accuracy) below. However, both still serve the core purpose outlined in [Motivation](#motivation).
-
 Deploys 1 or more serverless functions across different cities and 1 cloud scheduler.
 
 Every minute, the scheduler will trigger the serverless functions. These serverless functions will each asynchronously fetch the designated resources using the HTTP2 protocol.
@@ -15,6 +12,9 @@ In the process, they will record the following network timings and metadata:
 - Time to HTTP2 HEADERS frame.
 - Data transfer time.
 - Response headers.
+- How long the function stalled during each of the above. See [Timing Accuracy](#timing-accuracy).
+
+Timings are in milliseconds, measured with `performance.now()` to the microsecond.
 
 The information collected is sent to a BigQuery table for storage (optional, to be set up separately).
 
@@ -121,9 +121,7 @@ With 0.5 vCPU, the function can only use half a CPU each scheduling period. Once
 
 You'd think several dozen HTTP requests shouldn't exhaust 0.5 vCPU but sometimes it does. The how and why is fuzzy but this seems to be a cloud provider hardware and execution environment issue. Even running the same code on different Google regions results in different CPU utilization percentages.
 
-To see how badly this affects you, sum every HTTP request component and compare it with the Total Time to Fetch. If there's a huge difference, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
-
-Given the test in the previous paragraph, I find AWS Lambda to produce more accurate numbers.
+To see how badly this affects you, look at the stall columns: `dnsMaxStall`, `tcpMaxStall` and `tlsMaxStall` on each row, `requestMaxStall` and `downloadMaxStall` on each request and `maxStall` for the whole run. Each shows the most that step's time could be off by because the function stalled (stalls under 5ms don't show up). If the numbers are huge, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
 
 ## AWS
 
