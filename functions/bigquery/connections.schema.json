@@ -24,5 +24,8 @@
   { "name": "maxStall", "type": "FLOAT64", "mode": "NULLABLE" },
   { "name": "dnsMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
   { "name": "tcpMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
-  { "name": "tlsMaxStall", "type": "FLOAT64", "mode": "NULLABLE" }
+  { "name": "tlsMaxStall", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "firstKeyDerived", "type": "FLOAT64", "mode": "NULLABLE" },
+  { "name": "tlsVersion", "type": "STRING", "mode": "NULLABLE" },
+  { "name": "serverAddress", "type": "STRING", "mode": "NULLABLE" }
 ]

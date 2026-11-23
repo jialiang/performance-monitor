@@ -8,9 +8,11 @@ In the process, they will record the following network timings and metadata:
 
 - DNS lookup time.
 - TCP handshake time.
-- TLS negotiation time.
+- TLS negotiation time (including when the first secret key is computed).
+- TLS version.
 - Time to HTTP2 HEADERS frame.
 - Data transfer time.
+- Server IP address.
 - Response headers.
 - How long the function stalled during each of the above. See [Timing Accuracy](#timing-accuracy).
 

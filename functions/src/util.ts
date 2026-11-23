@@ -112,6 +112,9 @@ export const logToDatabase = async (
     dnsMaxStall: connection.dnsMaxStall ?? null,
     tcpMaxStall: connection.tcpMaxStall ?? null,
     tlsMaxStall: connection.tlsMaxStall ?? null,
+    firstKeyDerived: connection.firstKeyDerived ?? null,
+    tlsVersion: connection.tlsVersion ?? null,
+    serverAddress: connection.serverAddress ?? null,
     errors: toJsonString(connection.errors),
     requests: requests
       .filter((request) => shouldLogToDatabase[request.filename])

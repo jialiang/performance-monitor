@@ -20,7 +20,10 @@ export type ConnectionEntry = {
   dnsLookupStart?: number;
   dnsLookupEnd?: number;
   tcpDone?: number;
+  firstKeyDerived?: number;
   tlsDone?: number;
+  tlsVersion?: string;
+  serverAddress?: string;
   maxStall?: number;
   dnsMaxStall?: number;
   tcpMaxStall?: number;

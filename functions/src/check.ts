@@ -1,5 +1,6 @@
 import dns from "dns";
 import http2 from "http2";
+import { TLSSocket } from "tls";
 
 import { hostname } from "./config";
 import { ConnectionEntry, RequestEntry } from "./definitions";
@@ -45,6 +46,15 @@ export const runCheck = async () => {
 
     socket.on("connect", () => {
       connection.tcpDone = getElapsed(startMark);
+      connection.serverAddress = socket.remoteAddress;
+    });
+
+    // First key: on the server's first reply (TLS 1.3) or after its certificate (TLS 1.2)
+    socket.on("keylog", () => {
+      if (connection.firstKeyDerived != null) return;
+
+      connection.firstKeyDerived = getElapsed(startMark);
+      connection.tlsVersion = (socket as TLSSocket).getProtocol() ?? undefined;
     });
 
     socket.on("secureConnect", () => {
