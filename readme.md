@@ -161,7 +161,7 @@ Note that AWS does not allow configuring vCPU amount directly and scales it with
 
 ### Deploy
 
-1. Run `npm run clone:aws` in the `/functions` path to create or update. It runs `sam build` once, then `sam deploy` in each region.
+1. Run `npm run clone:aws` in the `/functions` path to create or update. It bundles the function into a single file with esbuild and runs `sam deploy` in every region in parallel.
 
 To remove a region:
 

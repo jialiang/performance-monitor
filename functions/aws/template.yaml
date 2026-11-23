@@ -13,10 +13,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: check
-      # `sam build` packages this folder with npm pack.
-      # package.json's files field supersedes .gitignore.
-      CodeUri: ../
-      Handler: aws/handler.handler
+      CodeUri: dist/
+      Handler: handler.handler
       Runtime: nodejs24.x
       Architectures: [arm64]
       MemorySize: 1024
@@ -25,7 +23,7 @@ Resources:
       Environment:
         Variables:
           GCLOUD_PROJECT: !Ref GoogleProjectId
-          GOOGLE_APPLICATION_CREDENTIALS: /var/task/aws/google-credentials.json
+          GOOGLE_APPLICATION_CREDENTIALS: /var/task/google-credentials.json
           CHECK_REGION: !Sub aws-${AWS::Region}
       Events:
         EveryMinute:
