@@ -49,7 +49,7 @@ Each serverless function is allocated 0.5 vCPU and the default amount of memory 
       }
       ```
 
-      Entries with `logToDatabase: true` are fetched with GET and logged. The rest are fetched with HEAD, which keeps them in the CDN cache without downloading them. A published change is picked up within 5 minutes. If the template can't be loaded or `RESOURCES` is missing, nothing is fetched and the error is logged.
+      Entries with `logToDatabase: true` are fetched with GET and logged. The rest are fetched with HEAD, which keeps them in the CDN cache without downloading them. The GETs go out first. Then HEADs are sent once the GETs finish. A published change is picked up within 5 minutes. If the template can't be loaded or `RESOURCES` is missing, nothing is fetched and the error is logged.
 
       If needed, grant the function's service account read access to the template using:
 
@@ -123,7 +123,7 @@ With 0.5 vCPU, the function can only use half a CPU each scheduling period. Once
 
 You'd think several dozen HTTP requests shouldn't exhaust 0.5 vCPU but sometimes it does. The how and why is fuzzy but this seems to be a cloud provider hardware and execution environment issue. Even running the same code on different Google regions results in different CPU utilization percentages.
 
-To see how badly this affects you, look at the stall columns: `dnsMaxStall`, `tcpMaxStall` and `tlsMaxStall` on each row, `requestMaxStall` and `downloadMaxStall` on each request and `maxStall` for the whole run. Each shows the most that step's time could be off by because the function stalled (stalls under 5ms don't show up). If the numbers are huge, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
+To see how badly this affects you, look at the stall columns: `dnsMaxStall`, `tcpMaxStall` and `tlsMaxStall` on each row, `requestMaxStall` and `downloadMaxStall` on each request and `maxStall` for everything up to the last logged resource. Each shows the most that step's time could be off by because the function stalled (stalls under 5ms don't show up). If the numbers are huge, then you may need to switch regions, increase vCPU or switch cloud platforms for that region. Note that you should use the median of hundreds of runs to ensure it's not a fluke.
 
 ## AWS
 

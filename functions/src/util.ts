@@ -2,7 +2,7 @@ import { adapt, managedwriter, protos } from "@google-cloud/bigquery-storage";
 import { error } from "firebase-functions/logger";
 
 import { bigQueryOptions } from "./config";
-import { ConnectionEntry, ERROR, ErrorEntry, RequestEntry, Resource } from "./definitions";
+import { ConnectionEntry, ERROR, ErrorEntry, RequestEntry } from "./definitions";
 
 const { WriterClient, JSONWriter } = managedwriter;
 
@@ -82,8 +82,7 @@ const toJsonString = (value: object | object[] | undefined) => {
 export const logToDatabase = async (
   startTime: number,
   connection: ConnectionEntry,
-  requests: RequestEntry[],
-  resources: Resource[]
+  requests: RequestEntry[]
 ) => {
   if (destinationTable == null) return;
 
@@ -91,14 +90,6 @@ export const logToDatabase = async (
   // For AWS, use CHECK_REGION
   const eventContext = process.env.EVENTARC_CLOUD_EVENT_SOURCE || "";
   const region = process.env.CHECK_REGION || eventContext.split("/")[3] || "UNKNOWN_REGION";
-
-  const shouldLogToDatabase = resources.reduce(
-    (shouldLogToDatabase, resource) => {
-      if (resource.logToDatabase === true) shouldLogToDatabase[resource.label] = true;
-      return shouldLogToDatabase;
-    },
-    {} as { [key: string]: boolean }
-  );
 
   const row = {
     region,
@@ -116,18 +107,16 @@ export const logToDatabase = async (
     tlsVersion: connection.tlsVersion ?? null,
     serverAddress: connection.serverAddress ?? null,
     errors: toJsonString(connection.errors),
-    requests: requests
-      .filter((request) => shouldLogToDatabase[request.filename])
-      .map((request) => ({
-        filename: request.filename,
-        requestSent: request.requestSent ?? null,
-        responseStart: request.responseStart ?? null,
-        responseEnd: request.responseEnd ?? null,
-        requestMaxStall: request.requestMaxStall ?? null,
-        downloadMaxStall: request.downloadMaxStall ?? null,
-        responseHeaders: toJsonString(request.responseHeaders),
-        errors: toJsonString(request.errors),
-      })),
+    requests: requests.map((request) => ({
+      filename: request.filename,
+      requestSent: request.requestSent ?? null,
+      responseStart: request.responseStart ?? null,
+      responseEnd: request.responseEnd ?? null,
+      requestMaxStall: request.requestMaxStall ?? null,
+      downloadMaxStall: request.downloadMaxStall ?? null,
+      responseHeaders: toJsonString(request.responseHeaders),
+      errors: toJsonString(request.errors),
+    })),
   };
 
   try {
